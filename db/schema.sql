@@ -1,5 +1,5 @@
 CREATE TABLE User (
-    userId      INT          PRIMARY KEY AUTO_INCREMENT,
+    userId      INT          PRIMARY KEY AUTO_INCREMENT, -- arbitrary unique ID
     email       VARCHAR(100) NOT NULL UNIQUE,
     name        VARCHAR(100) NOT NULL,
     createdAt   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -24,8 +24,8 @@ CREATE TABLE SysAdmin (
 );
 
 CREATE TABLE Course (
-    courseCode  VARCHAR(10)  PRIMARY KEY,
-    title       VARCHAR(200) NOT NULL,
+    courseCode  VARCHAR(10)  PRIMARY KEY, -- e.g. CS4604, MATH4184...
+    title       VARCHAR(200) NOT NULL, -- e.g. "Int Data Base Mgt Sys"
     description TEXT         NOT NULL,
     credits     INT          NOT NULL
 );
@@ -49,7 +49,7 @@ CREATE TABLE CourseInstructor (
     UNIQUE (courseCode, teacherId),
     FOREIGN KEY (courseCode)      REFERENCES Course(courseCode)   ON DELETE CASCADE, -- delete course-instructor pair (forum) if course is removed
     FOREIGN KEY (teacherId)       REFERENCES Teacher(userId)      ON DELETE CASCADE, -- same behavior for teacher (instructor) deletion
-    FOREIGN KEY (createdByUserId) REFERENCES SysAdmin(userId)     ON DELETE RESTRICT -- prohibit admin deletion
+    FOREIGN KEY (createdByUserId) REFERENCES SysAdmin(userId)     ON DELETE RESTRICT -- block deletion of admin who created a forum
 );
 
 CREATE TABLE Rating (
@@ -62,8 +62,8 @@ CREATE TABLE Rating (
     semesterId          INT       NOT NULL,
     UNIQUE (studentId, courseInstructorId, semesterId),
     CHECK (score BETWEEN 1 AND 5),
-    FOREIGN KEY (studentId)          REFERENCES Student(userId)           ON DELETE CASCADE,
-    FOREIGN KEY (courseInstructorId) REFERENCES CourseInstructor(courseInstructorId) ON DELETE CASCADE,
+    FOREIGN KEY (studentId)          REFERENCES Student(userId)           ON DELETE CASCADE, -- delete rating if student deletion occurs
+    FOREIGN KEY (courseInstructorId) REFERENCES CourseInstructor(courseInstructorId) ON DELETE CASCADE, -- delete rating if forum deletion occurs
     FOREIGN KEY (semesterId)         REFERENCES Semester(semesterId)       ON DELETE RESTRICT
 );
 
