@@ -10,8 +10,53 @@ body {
 
 .mainPanel {
     background-color: grey;
-    width: 20%;
+    width: 25%;
     height: 60%;
     border-radius: 10px;
+    display: flex;
+
+    flex-direction: column;
+    align-items: center;
+}
+
+.panelTitle {
+    color:black;    color: black;
+    align-items: center;
+    margin-top: 30px;
+}
+
+.connectButtons {
+    height: 30px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.connectBtn {
+    margin: 10px;
+    border-width: 0px;
+    padding: 15px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-radius: 4px;
+    font-size: 18px;
+}
+
+.connectBtn:hover {
+    background-color: rgb(216, 216, 216);
+}
+
+.successMsgRow {
+    height: 30px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    color: rgb(0, 180, 0);
 }
 
