@@ -49,7 +49,7 @@ body {
     background-color: rgb(216, 216, 216);
 }
 
-.successMsgRow {
+.statusMsgRow {
     height: 30px;
     margin-top: 10px;
     display: flex;
