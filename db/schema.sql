@@ -61,7 +61,7 @@ CREATE TABLE Rating (
     courseInstructorId  INT       NOT NULL,
     semesterId          INT       NOT NULL,
     UNIQUE (studentId, courseInstructorId, semesterId),
-    CHECK (score BETWEEN 1 AND 5),
+    CHECK (score BETWEEN 1 AND 10),
     FOREIGN KEY (studentId)          REFERENCES Student(userId)           ON DELETE CASCADE, -- delete rating if student deletion occurs
     FOREIGN KEY (courseInstructorId) REFERENCES CourseInstructor(courseInstructorId) ON DELETE CASCADE, -- delete rating if forum deletion occurs
     FOREIGN KEY (semesterId)         REFERENCES Semester(semesterId)       ON DELETE RESTRICT
