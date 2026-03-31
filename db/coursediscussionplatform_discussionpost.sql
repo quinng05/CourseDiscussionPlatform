@@ -16,33 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `discussionpost`
---
-
-DROP TABLE IF EXISTS `discussionpost`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `discussionpost` (
-  `postId` int NOT NULL AUTO_INCREMENT,
-  `postText` text NOT NULL,
-  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `courseInstructorId` int NOT NULL,
-  `semesterId` int DEFAULT NULL,
-  `authorId` int NOT NULL,
-  `parentPostId` int DEFAULT NULL,
-  PRIMARY KEY (`postId`),
-  KEY `courseInstructorId` (`courseInstructorId`),
-  KEY `semesterId` (`semesterId`),
-  KEY `authorId` (`authorId`),
-  KEY `parentPostId` (`parentPostId`),
-  CONSTRAINT `discussionpost_ibfk_1` FOREIGN KEY (`courseInstructorId`) REFERENCES `courseinstructor` (`courseInstructorId`) ON DELETE CASCADE,
-  CONSTRAINT `discussionpost_ibfk_2` FOREIGN KEY (`semesterId`) REFERENCES `semester` (`semesterId`) ON DELETE SET NULL,
-  CONSTRAINT `discussionpost_ibfk_3` FOREIGN KEY (`authorId`) REFERENCES `user` (`userId`) ON DELETE CASCADE,
-  CONSTRAINT `discussionpost_ibfk_4` FOREIGN KEY (`parentPostId`) REFERENCES `discussionpost` (`postId`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Dumping data for table `discussionpost`
 --
 
@@ -61,4 +34,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-31 17:29:13
+-- Dump completed on 2026-03-31 17:57:45

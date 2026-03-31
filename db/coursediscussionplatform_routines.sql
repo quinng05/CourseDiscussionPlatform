@@ -16,14 +16,8 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Dumping data for table `courseinstructor`
+-- Dumping routines for database 'coursediscussionplatform'
 --
-
-LOCK TABLES `courseinstructor` WRITE;
-/*!40000 ALTER TABLE `courseinstructor` DISABLE KEYS */;
-INSERT INTO `courseinstructor` VALUES (1,'CHEM1035',10,11),(2,'ENGL1105',9,11),(3,'MATH1226',8,12),(4,'CS3214',6,13),(5,'CS4604',7,14);
-/*!40000 ALTER TABLE `courseinstructor` ENABLE KEYS */;
-UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

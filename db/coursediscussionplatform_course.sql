@@ -16,22 +16,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `course`
---
-
-DROP TABLE IF EXISTS `course`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `course` (
-  `courseCode` varchar(10) NOT NULL,
-  `title` varchar(200) NOT NULL,
-  `description` text NOT NULL,
-  `credits` int NOT NULL,
-  PRIMARY KEY (`courseCode`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Dumping data for table `course`
 --
 
@@ -50,4 +34,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-31 17:29:13
+-- Dump completed on 2026-03-31 17:57:44

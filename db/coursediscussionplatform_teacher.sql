@@ -16,27 +16,12 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
--- Table structure for table `teacher`
---
-
-DROP TABLE IF EXISTS `teacher`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `teacher` (
-  `userId` int NOT NULL,
-  `department` varchar(100) NOT NULL,
-  PRIMARY KEY (`userId`),
-  CONSTRAINT `teacher_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `user` (`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
 -- Dumping data for table `teacher`
 --
 
 LOCK TABLES `teacher` WRITE;
 /*!40000 ALTER TABLE `teacher` DISABLE KEYS */;
-INSERT INTO `teacher` VALUES (6,'CS'),(7,'CS'),(8,'MATH'),(9,'ENGL'),(10,'CHEM');
+INSERT INTO `teacher` VALUES (6,'CS'),(7,'CS'),(8,'MATH'),(9,'ENGL'),(10,'CHEM'),(19,'PHYS'),(20,'ENGE');
 /*!40000 ALTER TABLE `teacher` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -49,4 +34,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-31 17:29:14
+-- Dump completed on 2026-03-31 17:57:44
