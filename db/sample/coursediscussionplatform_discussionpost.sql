@@ -21,7 +21,7 @@
 
 LOCK TABLES `discussionpost` WRITE;
 /*!40000 ALTER TABLE `discussionpost` DISABLE KEYS */;
-INSERT INTO `discussionpost` VALUES (1,'This class sucks','2025-12-02 05:00:00',1,1,1,1),(2,'I loved the way this class was taught','2026-03-17 20:10:34',5,3,2,2),(3,'This class was too difficult','2025-02-28 05:00:00',4,2,1,3),(4,'I enjoyed learning in this class','2025-11-28 05:00:00',5,1,3,4),(5,'I found the class to be boring','2026-03-16 04:00:00',3,3,4,5);
+INSERT INTO `discussionpost` VALUES (1,'This class sucks','2025-12-02 05:00:00',1,1,1,1,1),(2,'I loved the way this class was taught','2026-03-17 20:10:34',5,3,2,2,2),(3,'This class was too difficult','2025-02-28 05:00:00',2,2,1,3,3),(4,'I enjoyed learning in this class','2025-11-28 05:00:00',5,1,3,4,4),(5,'I found the class to be boring','2026-03-16 04:00:00',3,3,4,5,5);
 /*!40000 ALTER TABLE `discussionpost` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -34,4 +34,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-03-31 17:57:45
+-- Dump completed on 2026-03-31 19:07:35
