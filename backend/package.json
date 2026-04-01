@@ -1,0 +1,20 @@
+{
+  "name": "server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "db:schema": "node -e \"console.log('Run from server/: mysql -h \\\"' + (process.env.DB_HOST||'127.0.0.1') + '\\\" -u USER -p DATABASE < db/schema.sql')\"",
+    "db:seed": "node -e \"console.log('After schema, run sample/*.sql in FK order (see server/db/sample/).')\""
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-session": "^1.18.2",
+    "mysql2": "^3.15.3"
+  }
+}

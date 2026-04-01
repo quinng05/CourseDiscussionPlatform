@@ -2,7 +2,7 @@ CREATE TABLE User (
     userId      INT          PRIMARY KEY AUTO_INCREMENT, -- arbitrary unique ID
     email       VARCHAR(100) NOT NULL UNIQUE,
     name        VARCHAR(100) NOT NULL,
-    passwordHash VARCHAR(255) NOT NULL
+    passwordHash VARCHAR(255) NOT NULL,
     createdAt   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     userType    ENUM('student', 'teacher', 'sysadmin') NOT NULL
 );
@@ -79,6 +79,6 @@ CREATE TABLE DiscussionPost (
     FOREIGN KEY (courseInstructorId) REFERENCES CourseInstructor(courseInstructorId) ON DELETE CASCADE,
     FOREIGN KEY (semesterId)         REFERENCES Semester(semesterId)  ON DELETE SET NULL,
     FOREIGN KEY (authorId)           REFERENCES User(userId)          ON DELETE CASCADE,
-    FOREIGN KEY (parentPostId)       REFERENCES DiscussionPost(postId) ON DELETE CASCADE
+    FOREIGN KEY (parentPostId)       REFERENCES DiscussionPost(postId) ON DELETE CASCADE,
     FOREIGN KEY (ratingId)           REFERENCES Rating(ratingId) ON DELETE SET NULL
 );

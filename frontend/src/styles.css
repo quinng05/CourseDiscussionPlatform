@@ -4,6 +4,10 @@
   padding: 0;
 }
 
+#root {
+  min-height: 100vh;
+}
+
 body {
   font-family: sans-serif;
   font-size: 14px;
@@ -46,11 +50,12 @@ nav button {
 }
 
 /* ── LOGIN ───────────────────────────────────────────── */
-body.login-page {
+body.login-page,
+.login-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .login-box {
@@ -103,11 +108,16 @@ body.login-page {
   display: none;
 }
 
+.err.visible {
+  display: block;
+}
+
 /* ── HOME ────────────────────────────────────────────── */
-body.home-page {
+body.home-page,
+.home-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 .home-body {
@@ -191,6 +201,10 @@ body.home-page {
   margin-top: 8px;
 }
 
+#noResults.visible {
+  display: block;
+}
+
 /* ── MODAL ───────────────────────────────────────────── */
 .modal-overlay {
   display: none;
@@ -245,10 +259,11 @@ body.home-page {
 }
 
 /* ── FORUM ───────────────────────────────────────────── */
-body.forum-page {
+body.forum-page,
+.forum-page {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  min-height: 100vh;
 }
 
 #forumHeader {
@@ -348,6 +363,10 @@ body.forum-page {
   background: #fafafa;
 }
 
+.inline-reply-form.visible {
+  display: block;
+}
+
 .inline-reply-form textarea {
   width: 100%;
   padding: 5px;
@@ -427,4 +446,10 @@ body.forum-page {
   font-size: 0.82rem;
   cursor: pointer;
   margin-left: auto;
+}
+
+.app-loading {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
 }
