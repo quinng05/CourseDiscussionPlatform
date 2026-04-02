@@ -11,12 +11,60 @@ function requireSession(req, res, next) {
   next();
 }
 
-router.get("/:courseInstructorId/posts", requireSession, (req, res) => {
+router.get("/:courseInstructorId/posts", requireSession, async (req, res) => {
   const id = Number(req.params.courseInstructorId);
   if (!Number.isFinite(id)) {
     return res.status(400).json({ error: "Invalid forum id" });
   }
-  res.json(mockStore.getPosts(id));
+
+  const pool = getPool();
+  if (!pool) {
+    return res.json(mockStore.getPosts(id));
+  }
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+        dp.postId,
+        dp.postText AS text,
+        dp.createdAt,
+        dp.parentPostId,
+        dp.ratingId,
+        dp.authorId,
+        dp.semesterId,
+        COALESCE(u.name, 'Unknown') AS authorName,
+        r.score
+       FROM DiscussionPost dp
+       LEFT JOIN User u ON dp.authorId = u.userId
+       LEFT JOIN Rating r ON dp.ratingId = r.ratingId
+       WHERE dp.courseInstructorId = ?
+       ORDER BY dp.createdAt ASC`,
+      [id]
+    );
+    console.log("Posts rows:", rows);
+
+    // Build nested tree (top level posts with replies)
+    const postMap = {};
+    const topLevel = [];
+
+    for (const row of rows) {
+      postMap[row.postId] = { ...row, replies: [] };
+    }
+    for (const row of rows) {
+      if (row.parentPostId) {
+        if (postMap[row.parentPostId]) {
+          postMap[row.parentPostId].replies.push(postMap[row.postId]);
+        }
+      } else {
+        topLevel.push(postMap[row.postId]);
+      }
+    }
+
+    return res.json(topLevel);
+  } catch (e) {
+    console.error(e);
+    return res.json(mockStore.getPosts(id));
+  }
 });
 
 router.get("/", requireSession, async (req, res) => {
