@@ -91,8 +91,8 @@ router.post("/ratings", requireSession, async (req, res) => {
 
     // Insert rating
     const [ratingResult] = await pool.query(
-      `INSERT INTO Rating (score, courseInstructorId, studentId, semesterId, comment)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO Rating (score, courseInstructorId, studentId, semesterId)
+       VALUES (?, ?, ?, ?)`,
       [s, forumId, req.session.userId, semesterId, text]
     );
     const ratingId = ratingResult.insertId;
