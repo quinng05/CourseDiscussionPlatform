@@ -23,6 +23,19 @@ const SCORE_OPTIONS = [
   { value: "10", label: "10 (5★)" },
 ];
 
+function formatDate(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function scoreLabel(score) {
   if (score === null || score === undefined) return "";
   const half = score / 2;
@@ -66,7 +79,7 @@ function PostItem({ post, forumId, onPosted, replyOpenId, setReplyOpenId }) {
     <div className="post" data-post-id={post.postId}>
       <div className="post-meta">
         <strong>{post.anonymous ? "Anonymous" : post.authorName}</strong>
-        {post.semester ? ` • ${post.semester}` : ""} • {post.createdAt}
+        {post.semester ? ` • ${post.semester}` : ""} • {formatDate(post.createdAt)}
       </div>
       {post.score != null && (
         <div className="post-score">{scoreLabel(post.score)}</div>
