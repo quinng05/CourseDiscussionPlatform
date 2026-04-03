@@ -1,0 +1,13 @@
+USE coursediscussionplatform;
+
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE FROM DiscussionPost;
+DELETE FROM Rating;
+DELETE FROM CourseInstructor;
+DELETE FROM Student;
+DELETE FROM Teacher;
+DELETE FROM SysAdmin;
+DELETE FROM User;
+DELETE FROM Course;
+DELETE FROM Semester;
+SET FOREIGN_KEY_CHECKS = 1;

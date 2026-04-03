@@ -64,7 +64,7 @@ This creates all the tables: `User`, `Student`, `Teacher`, `SysAdmin`, `Course`,
 ### Load sample data
 
 ```bash
-mysql -u root -p coursediscussionplatform < backend/db/sample/sample_data.sql
+mysql -u root -p < backend/db/sample/sample_data.sql
 ```
 
 This populates the database with:
@@ -76,7 +76,12 @@ This populates the database with:
 
 > **To reload sample data at any point** (wipes and re-seeds everything):
 > ```bash
-> mysql -u root -p coursediscussionplatform < backend/db/sample/sample_data.sql
+> mysql -u root -p < backend/db/sample/sample_data.sql
+> ```
+>
+> **To wipe all data without re-seeding:**
+> ```bash
+> mysql -u root -p < backend/db/sample/clear_samples.sql
 > ```
 
 ---
@@ -158,6 +163,7 @@ CourseDiscussionPlatform/
 │   └── db/
 │       ├── schema.sql           # Table definitions
 │       └── sample/
-│           └── sample_data.sql  # Seed data
+│           ├── sample_data.sql  # Wipes and re-seeds all data
+│           └── clear_samples.sql  # Wipes all data only
 └── package.json       # Root workspace config (run everything from here)
 ```
