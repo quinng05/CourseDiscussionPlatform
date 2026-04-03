@@ -21,26 +21,46 @@ export default function Login() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({
-        email: email.trim(),
-        password,
-        role,
-      }),
+      body: JSON.stringify({ email: email.trim(), password, role }),
     });
     if (res.ok) {
       setShowErr(false);
       await refresh();
       navigate("/", { replace: true });
     } else {
-      let msg =
-        "Incorrect email, password, or role (e.g. pick Student for this account).";
+      let msg = "Incorrect email, password, or role (e.g. pick Student for this account).";
       if (res.status >= 500) {
         const j = await res.json().catch(() => ({}));
-        msg = j.error
-          ? String(j.error)
-          : "Server error — check the terminal running the API.";
+        msg = j.error ? String(j.error) : "Server error — check the terminal running the API.";
       }
       setErrMsg(msg);
+      setShowErr(true);
+    }
+  }
+
+  async function doDelete(e) {
+    e.preventDefault();
+    if (!email || !password || !role) {
+      setErrMsg("Please fill in email, password, and role to delete your account.");
+      setShowErr(true);
+      return;
+    }
+    const confirmed = window.confirm(`Are you sure you want to delete the account for ${email}? This cannot be undone.`);
+    if (!confirmed) return;
+    const res = await fetch("/api/delete-account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email: email.trim(), password, role }),
+    });
+    if (res.ok) {
+      setShowErr(false);
+      window.alert("Account deleted successfully.");
+      setEmail("");
+      setPassword("");
+    } else {
+      const j = await res.json().catch(() => ({}));
+      setErrMsg(j.error || "Could not delete account. Check your credentials.");
       setShowErr(true);
     }
   }
@@ -50,7 +70,6 @@ export default function Login() {
       <div className="login-box">
         <h1>Course Discussion Platform</h1>
         <p>Virginia Tech — sign in with your VT credentials</p>
-
         <form onSubmit={doLogin}>
           <label htmlFor="loginEmail">VT Email</label>
           <input
@@ -61,7 +80,6 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-
           <label htmlFor="loginPass">Password</label>
           <input
             id="loginPass"
@@ -71,7 +89,6 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-
           <label htmlFor="loginRole">I am a...</label>
           <select
             id="loginRole"
@@ -82,12 +99,13 @@ export default function Login() {
             <option value="teacher">Teacher</option>
             <option value="sysadmin">System Administrator</option>
           </select>
-
           <button type="submit">Sign In</button>
+          <button type="button" onClick={doDelete} style={{ marginTop: "8px", background: "#c0392b", color: "white" }}>
+            Delete Account
+          </button>
         </form>
         <div className={`err${showErr ? " visible" : ""}`} id="loginErr">
-          {errMsg ||
-            "Incorrect email, password, or role (e.g. pick Student for this account)."}
+          {errMsg || "Incorrect email, password, or role (e.g. pick Student for this account)."}
         </div>
       </div>
     </div>
