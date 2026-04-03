@@ -44,11 +44,14 @@ function scoreLabel(score) {
   return `${"★".repeat(full)}${hasH ? "½" : ""} (${score}/10)`;
 }
 
-function PostItem({ post, forumId, onPosted, replyOpenId, setReplyOpenId }) {
+function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId }) {
   const [repliesOpen, setRepliesOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState("");
   const nReplies = post.replies?.length || 0;
   const formVisible = replyOpenId === post.postId;
+  const isOwner = post.authorId === userId;
 
   async function submitReply() {
     const text = replyText.trim();
@@ -75,6 +78,39 @@ function PostItem({ post, forumId, onPosted, replyOpenId, setReplyOpenId }) {
     onPosted();
   }
 
+  async function saveEdit() {
+    const text = editText.trim();
+    if (!text) {
+      window.alert("Post text cannot be empty.");
+      return;
+    }
+    const r = await fetch(`/api/posts/${post.postId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ postText: text }),
+    });
+    if (!r.ok) {
+      window.alert("Could not save edit.");
+      return;
+    }
+    setEditing(false);
+    onPosted();
+  }
+
+  async function deletePost() {
+    if (!window.confirm("Delete this post? This cannot be undone.")) return;
+    const r = await fetch(`/api/posts/${post.postId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!r.ok) {
+      window.alert("Could not delete post.");
+      return;
+    }
+    onPosted();
+  }
+
   return (
     <div className="post" data-post-id={post.postId}>
       <div className="post-meta">
@@ -84,26 +120,57 @@ function PostItem({ post, forumId, onPosted, replyOpenId, setReplyOpenId }) {
       {post.score != null && (
         <div className="post-score">{scoreLabel(post.score)}</div>
       )}
-      {post.text ? <div className="post-text">{post.text}</div> : null}
-      <button
-        type="button"
-        className="reply-btn"
-        onClick={() => {
-          setReplyOpenId(post.postId);
-        }}
-      >
-        Reply
-      </button>
-      {nReplies > 0 && (
+      {editing ? (
+        <div className="inline-edit-form">
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
+          <div className="form-btns">
+            <button type="button" onClick={saveEdit}>Save</button>
+            <button type="button" onClick={() => setEditing(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        post.text ? <div className="post-text">{post.text}</div> : null
+      )}
+      <div className="post-actions">
         <button
           type="button"
-          className="replies-toggle"
-          onClick={() => setRepliesOpen((o) => !o)}
+          className="reply-btn"
+          onClick={() => setReplyOpenId(post.postId)}
         >
-          {nReplies} repl{nReplies === 1 ? "y" : "ies"}{" "}
-          {repliesOpen ? "▲" : "▼"}
+          Reply
         </button>
-      )}
+        {isOwner && !editing && (
+          <>
+            <button
+              type="button"
+              className="edit-btn"
+              onClick={() => { setEditing(true); setEditText(post.text || ""); }}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="delete-btn"
+              onClick={deletePost}
+            >
+              Delete
+            </button>
+          </>
+        )}
+        {nReplies > 0 && (
+          <button
+            type="button"
+            className="replies-toggle"
+            onClick={() => setRepliesOpen((o) => !o)}
+          >
+            {nReplies} repl{nReplies === 1 ? "y" : "ies"}{" "}
+            {repliesOpen ? "▲" : "▼"}
+          </button>
+        )}
+      </div>
       {nReplies > 0 && (
         <div className={`replies-list${repliesOpen ? " open" : ""}`}>
           {post.replies.map((r) => (
@@ -111,6 +178,7 @@ function PostItem({ post, forumId, onPosted, replyOpenId, setReplyOpenId }) {
               key={r.postId}
               post={r}
               forumId={forumId}
+              userId={userId}
               onPosted={onPosted}
               replyOpenId={replyOpenId}
               setReplyOpenId={setReplyOpenId}
@@ -273,6 +341,7 @@ export default function Forum() {
               key={p.postId}
               post={p}
               forumId={forumId}
+              userId={user?.userId}
               onPosted={loadAll}
               replyOpenId={replyOpenId}
               setReplyOpenId={setReplyOpenId}

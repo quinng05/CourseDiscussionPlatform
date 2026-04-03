@@ -274,7 +274,7 @@ router.get("/session", (req, res) => {
   if (req.session.userId === undefined) {
     return res.status(401).json(null);
   }
-  res.json({ name: req.session.name, role: req.session.role });
+  res.json({ userId: req.session.userId, name: req.session.name, role: req.session.role });
 });
 
 router.delete("/delete-account", async (req, res) => {

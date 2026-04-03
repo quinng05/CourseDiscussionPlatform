@@ -333,6 +333,64 @@ body.forum-page,
   text-decoration: underline;
 }
 
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.edit-btn {
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #0057b8;
+  padding: 0;
+}
+
+.edit-btn:hover {
+  text-decoration: underline;
+}
+
+.delete-btn {
+  font-size: 0.75rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #c00;
+  padding: 0;
+}
+
+.delete-btn:hover {
+  text-decoration: underline;
+}
+
+.inline-edit-form {
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.inline-edit-form textarea {
+  width: 100%;
+  padding: 5px;
+  font-size: 0.82rem;
+  resize: vertical;
+  height: 52px;
+}
+
+.inline-edit-form .form-btns {
+  margin-top: 5px;
+  display: flex;
+  gap: 6px;
+}
+
+.inline-edit-form button {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
 .replies-toggle {
   font-size: 0.75rem;
   background: none;
@@ -340,7 +398,6 @@ body.forum-page,
   cursor: pointer;
   color: #555;
   padding: 0;
-  margin-left: 10px;
 }
 
 .replies-list {

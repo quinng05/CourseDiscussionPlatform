@@ -114,4 +114,55 @@ router.post("/ratings", requireSession, async (req, res) => {
   }
 });
 
+// Edit a post (author only)
+router.put("/posts/:postId", requireSession, async (req, res) => {
+  const postId = Number(req.params.postId);
+  const text = String(req.body?.postText || "").trim();
+  if (!Number.isFinite(postId) || !text) {
+    return res.status(400).json({ error: "postText required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "No database connection" });
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE DiscussionPost SET postText = ? WHERE postId = ? AND authorId = ?`,
+      [text, postId, req.session.userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Post not found or not yours" });
+    }
+    return res.json({ postId, postText: text });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not update post" });
+  }
+});
+
+// Delete a post (author only)
+router.delete("/posts/:postId", requireSession, async (req, res) => {
+  const postId = Number(req.params.postId);
+  if (!Number.isFinite(postId)) {
+    return res.status(400).json({ error: "Invalid post id" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "No database connection" });
+
+  try {
+    const [result] = await pool.query(
+      `DELETE FROM DiscussionPost WHERE postId = ? AND authorId = ?`,
+      [postId, req.session.userId]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Post not found or not yours" });
+    }
+    return res.sendStatus(204);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not delete post" });
+  }
+});
+
 export default router;
