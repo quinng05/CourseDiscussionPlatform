@@ -277,4 +277,47 @@ router.get("/session", (req, res) => {
   res.json({ name: req.session.name, role: req.session.role });
 });
 
+router.delete("/delete-account", async (req, res) => {
+  const { email, password, role } = req.body || {};
+  if (!email || !password || !role) {
+    return res.status(400).json({ error: "email, password, and role required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "No database connection" });
+  }
+
+  try {
+    const raw = await findUserByEmail(pool, email);
+    const user = mapUserRow(raw);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    const ok = await verifyPassword(user.passwordHash, password);
+    if (!ok) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    if (String(user.userType).toLowerCase() !== String(role).toLowerCase().trim()) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Delete the user — cascades to Student/Teacher/SysAdmin due to ON DELETE CASCADE
+    for (const table of ["`User`", "`user`"]) {
+      try {
+        await pool.query(`DELETE FROM ${table} WHERE userId = ?`, [user.userId]);
+        break;
+      } catch (e) {
+        if (e.code === "ER_NO_SUCH_TABLE") continue;
+        throw e;
+      }
+    }
+
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not delete account" });
+  }
+});
+
 export default router;
