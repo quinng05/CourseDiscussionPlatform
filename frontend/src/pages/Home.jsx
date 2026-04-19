@@ -13,6 +13,7 @@ export default function Home() {
   const [newCode, setNewCode] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newInstructor, setNewInstructor] = useState("");
+  const [editForumId, setEditForumId] = useState(null);
 
   const loadForums = useCallback(async () => {
     setLoadError(null);
@@ -79,6 +80,70 @@ export default function Home() {
     await loadForums();
   }
 
+  function openCreateModal() {
+    setEditForumId(null);
+    setNewCode("");
+    setNewTitle("");
+    setNewInstructor("");
+    setModalOpen(true);
+  }
+
+  function openEditModal(forum) {
+    setEditForumId(forum.id);
+    setNewCode(forum.code);
+    setNewTitle(forum.title);
+    setNewInstructor(forum.instructor);
+    setModalOpen(true);
+  }
+
+  async function saveForum() {
+    if (editForumId == null) {
+      await createForum();
+      return;
+    }
+    const code = newCode.trim();
+    const title = newTitle.trim();
+    const instructor = newInstructor.trim();
+    if (!code || !title || !instructor) {
+      window.alert("All fields required.");
+      return;
+    }
+    const r = await fetch(`/api/forums/${editForumId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ code, title, instructor }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      window.alert(err.error || "Could not update forum.");
+      return;
+    }
+    setModalOpen(false);
+    setEditForumId(null);
+    setNewCode("");
+    setNewTitle("");
+    setNewInstructor("");
+    await loadForums();
+  }
+
+  async function deleteForum(forum) {
+    const confirmed = window.confirm(
+      `Delete forum "${forum.title} (${forum.code})" with ${forum.instructor}?`,
+    );
+    if (!confirmed) return;
+    const r = await fetch(`/api/forums/${forum.id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      window.alert(err.error || "Could not delete forum.");
+      return;
+    }
+    await loadForums();
+  }
+
   return (
     <div className="home-page">
       <nav>
@@ -119,7 +184,7 @@ export default function Home() {
 
         {user?.role === "sysadmin" && (
           <div id="adminCreate">
-            <button type="button" onClick={() => setModalOpen(true)}>
+            <button type="button" onClick={openCreateModal}>
               + Create New Forum
             </button>
           </div>
@@ -143,6 +208,28 @@ export default function Home() {
                 <div className="card-sub">
                   with {f.instructor} — {f.ratingCount} ratings
                 </div>
+                {user?.role === "sysadmin" && (
+                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditModal(f);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deleteForum(f);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="card-rating">
                 {Number(f.avgRating).toFixed(1)} / 5
@@ -165,7 +252,7 @@ export default function Home() {
           aria-modal="true"
           onClick={(e) => e.stopPropagation()}
         >
-          <h2>Create New Forum</h2>
+          <h2>{editForumId == null ? "Create New Forum" : "Update Forum"}</h2>
           <label>Course Code</label>
           <input
             type="text"
@@ -191,8 +278,8 @@ export default function Home() {
             <button type="button" onClick={() => setModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" onClick={createForum}>
-              Create
+            <button type="button" onClick={saveForum}>
+              {editForumId == null ? "Create" : "Save"}
             </button>
           </div>
         </div>

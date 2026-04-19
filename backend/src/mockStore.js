@@ -168,6 +168,28 @@ export function addForum({ id: explicitId, code, title, instructor }) {
   return row;
 }
 
+export function updateForum(forumId, { code, title, instructor }) {
+  const id = Number(forumId);
+  const idx = forums.findIndex((f) => Number(f.id) === id);
+  if (idx < 0) return null;
+  forums[idx] = {
+    ...forums[idx],
+    code,
+    title,
+    instructor,
+  };
+  return forums[idx];
+}
+
+export function deleteForum(forumId) {
+  const id = Number(forumId);
+  const before = forums.length;
+  forums = forums.filter((f) => Number(f.id) !== id);
+  if (before === forums.length) return false;
+  delete postsByForum[id];
+  return true;
+}
+
 export function getPosts(forumId) {
   return ensurePosts(forumId);
 }
