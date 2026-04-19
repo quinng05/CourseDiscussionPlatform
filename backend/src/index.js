@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import authRoutes from "./routes/auth.js";
 import forumsRoutes from "./routes/forums.js";
 import postsRoutes from "./routes/posts.js";
+import usersRoutes from "./routes/users.js";
+import reportsRoutes from "./routes/reports.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "../..");
@@ -42,6 +44,8 @@ app.use(
 app.use("/api", authRoutes);
 app.use("/api/forums", forumsRoutes);
 app.use("/api", postsRoutes);
+app.use("/api/users", usersRoutes);
+app.use("/api/reports", reportsRoutes);
 
 if (isProd) {
   app.use(express.static(clientDist));

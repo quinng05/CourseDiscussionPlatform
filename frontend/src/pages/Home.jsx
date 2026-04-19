@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 
 export default function Home() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchType, setSearchType] = useState("title");
   const [searchInput, setSearchInput] = useState("");
@@ -146,19 +146,6 @@ export default function Home() {
 
   return (
     <div className="home-page">
-      <nav>
-        <strong>Course Discussion Platform</strong>
-        <span>
-          {user?.name} ({user?.role})
-        </span>
-        <button
-          type="button"
-          onClick={() => signOut().then(() => navigate("/login"))}
-        >
-          Sign out
-        </button>
-      </nav>
-
       <div className="home-body">
         <h1>Find a course forum</h1>
         {loadError && (

@@ -1,34 +1,8 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { getPool } from "../db/pool.js";
 
 const router = Router();
-
-// #region agent log
-const AGENT_INGEST =
-  "http://127.0.0.1:7243/ingest/018aa5d6-2f3e-4372-8476-b6b91784f640";
-const AGENT_LOG_FILE = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../.cursor/debug.log",
-);
-function agentLog(payload) {
-  const line = JSON.stringify({ ...payload, timestamp: Date.now() }) + "\n";
-  try {
-    fs.mkdirSync(path.dirname(AGENT_LOG_FILE), { recursive: true });
-    fs.appendFileSync(AGENT_LOG_FILE, line);
-  } catch {
-    /* ignore */
-  }
-  fetch(AGENT_INGEST, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, timestamp: Date.now() }),
-  }).catch(() => {});
-}
-// #endregion
 
 function loginCatchErrorResponse(e) {
   const code = e && typeof e === "object" ? e.code : undefined;
@@ -42,7 +16,8 @@ function loginCatchErrorResponse(e) {
   if (code === "ER_ACCESS_DENIED_ERROR") {
     return {
       status: 503,
-      error: "Database access denied. Check DB_USER and DB_PASSWORD in .env.",
+      error:
+        "Database access denied. Check DB_USER and DB_PASSWORD in .env.",
     };
   }
   const sqlMessage =
@@ -74,7 +49,6 @@ async function verifyPassword(stored, plain) {
   return p === s || p === s.trim();
 }
 
-/** mysql2 often returns lowercase column names; handle any casing. */
 function mapUserRow(row) {
   if (!row) return null;
   const lower = Object.fromEntries(
@@ -101,7 +75,6 @@ function mapUserRow(row) {
   };
 }
 
-/** Seed SQL uses `user`; schema DDL may use `User` — match both on case-sensitive MySQL. */
 async function findUserByEmail(pool, email) {
   const sql = (table) =>
     `SELECT * FROM ${table} WHERE LOWER(TRIM(\`email\`)) = LOWER(TRIM(?)) LIMIT 1`;
@@ -117,44 +90,47 @@ async function findUserByEmail(pool, email) {
   return null;
 }
 
+async function getPasswordHashRow(pool, userId) {
+  for (const table of ["`User`", "`user`"]) {
+    try {
+      const [rows] = await pool.query(
+        `SELECT passwordHash FROM ${table} WHERE userId = ? LIMIT 1`,
+        [userId],
+      );
+      if (rows[0]) return rows[0];
+    } catch (e) {
+      if (e.code === "ER_NO_SUCH_TABLE") continue;
+      throw e;
+    }
+  }
+  return null;
+}
+
+async function updatePasswordForUser(pool, userId, passwordHash) {
+  for (const table of ["`User`", "`user`"]) {
+    try {
+      const [r] = await pool.query(
+        `UPDATE ${table} SET passwordHash = ? WHERE userId = ?`,
+        [passwordHash, userId],
+      );
+      if (r.affectedRows > 0) return true;
+    } catch (e) {
+      if (e.code === "ER_NO_SUCH_TABLE") continue;
+      throw e;
+    }
+  }
+  return false;
+}
+
 router.post("/login", async (req, res) => {
   const { email, password, role } = req.body || {};
   if (!email || !password || !role) {
-    // #region agent log
-    agentLog({
-      hypothesisId: "H-body",
-      location: "auth.js:login",
-      message: "login rejected missing fields",
-      data: {
-        hasEmail: !!email,
-        hasPassword: !!password,
-        hasRole: !!role,
-        contentType: req.headers["content-type"],
-      },
-    });
-    // #endregion
     return res
       .status(400)
       .json({ error: "email, password, and role required" });
   }
 
   const pool = getPool();
-  // #region agent log
-  agentLog({
-    hypothesisId: "H5",
-    location: "auth.js:login",
-    message: "pool and client shape",
-    data: {
-      poolActive: !!pool,
-      emailDomain: String(email).includes("@")
-        ? String(email).split("@")[1]?.slice(0, 24)
-        : "none",
-      emailLocalLen: String(email).split("@")[0]?.length ?? 0,
-      passwordLen: String(password).length,
-      role,
-    },
-  });
-  // #endregion
   if (!pool) {
     req.session.userId = 0;
     req.session.name = email.split("@")[0] || "User";
@@ -167,63 +143,10 @@ router.post("/login", async (req, res) => {
   try {
     const raw = await findUserByEmail(pool, email);
     const user = mapUserRow(raw);
-    // #region agent log
-    agentLog({
-      hypothesisId: "H2",
-      location: "auth.js:login:afterLookup",
-      message: "db row lookup",
-      data: {
-        rowFound: !!raw,
-        rowKeyCount: raw ? Object.keys(raw).length : 0,
-        rowKeySample: raw ? Object.keys(raw).slice(0, 12) : [],
-        mappedHasPasswordField: !!(user && user.passwordHash),
-        mappedUserType: user?.userType ?? null,
-      },
-    });
-    // #endregion
-    if (!user) {
-      // #region agent log
-      agentLog({
-        hypothesisId: "H2",
-        location: "auth.js:login",
-        message: "outcome 401 noUser",
-        data: {},
-      });
-      // #endregion
-      return res.status(401).send("Unauthorized");
-    }
+    if (!user) return res.status(401).send("Unauthorized");
     const ok = await verifyPassword(user.passwordHash, password);
-    // #region agent log
-    agentLog({
-      hypothesisId: "H3",
-      location: "auth.js:login",
-      message: "password verify",
-      data: {
-        ok,
-        storedLooksBcrypt: String(user.passwordHash || "").startsWith("$2"),
-      },
-    });
-    // #endregion
-    if (!ok) {
-      // #region agent log
-      agentLog({
-        hypothesisId: "H3",
-        location: "auth.js:login",
-        message: "outcome 401 badPassword",
-        data: {},
-      });
-      // #endregion
-      return res.status(401).send("Unauthorized");
-    }
+    if (!ok) return res.status(401).send("Unauthorized");
     if (String(user.userType).toLowerCase() !== wantRole) {
-      // #region agent log
-      agentLog({
-        hypothesisId: "H4",
-        location: "auth.js:login",
-        message: "outcome 401 badRole",
-        data: { wantRole, gotType: user.userType },
-      });
-      // #endregion
       return res.status(401).send("Unauthorized");
     }
 
@@ -231,33 +154,9 @@ router.post("/login", async (req, res) => {
     req.session.userId = Number.isFinite(sid) ? sid : 0;
     req.session.name = user.name;
     req.session.role = user.userType;
-    // #region agent log
-    agentLog({
-      hypothesisId: "H4-session",
-      location: "auth.js:login",
-      message: "outcome 200 before send",
-      data: { sessionUserId: req.session.userId },
-    });
-    // #endregion
     return res.sendStatus(200);
   } catch (e) {
     console.error(e);
-    // #region agent log
-    agentLog({
-      hypothesisId: "H1",
-      location: "auth.js:login:catch",
-      message: "login exception",
-      data: {
-        code: e?.code,
-        name: e?.name,
-        errMsg:
-          e && typeof e === "object" && "message" in e
-            ? String(e.message).slice(0, 200)
-            : String(e).slice(0, 200),
-        clientError: loginCatchErrorResponse(e).error.slice(0, 120),
-      },
-    });
-    // #endregion
     const { status, error } = loginCatchErrorResponse(e);
     return res.status(status).json({ error });
   }
@@ -274,10 +173,140 @@ router.get("/session", (req, res) => {
   if (req.session.userId === undefined) {
     return res.status(401).json(null);
   }
-  res.json({ userId: req.session.userId, name: req.session.name, role: req.session.role });
+  res.json({
+    userId: req.session.userId,
+    name: req.session.name,
+    role: req.session.role,
+  });
+});
+
+/** Self-service registration (student or teacher only). Passwords stored as bcrypt. */
+router.post("/signup", async (req, res) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({
+      error:
+        "Database is required for sign-up. Configure DB_* in backend/.env.",
+    });
+  }
+
+  const { email, password, name, role, major, department } = req.body || {};
+  const em = String(email || "").trim().toLowerCase();
+  const nm = String(name || "").trim();
+  const pw = String(password || "");
+  const rl = String(role || "").toLowerCase().trim();
+
+  if (!em || !pw || !nm || !rl) {
+    return res
+      .status(400)
+      .json({ error: "email, password, name, and role are required" });
+  }
+  if (!["student", "teacher"].includes(rl)) {
+    return res
+      .status(400)
+      .json({ error: "Sign-up is only available for student or teacher accounts" });
+  }
+  if (rl === "student" && !String(major || "").trim()) {
+    return res.status(400).json({ error: "major is required for students" });
+  }
+  if (rl === "teacher" && !String(department || "").trim()) {
+    return res
+      .status(400)
+      .json({ error: "department is required for teachers" });
+  }
+  if (pw.length < 8) {
+    return res.status(400).json({ error: "password must be at least 8 characters" });
+  }
+
+  const existing = await findUserByEmail(pool, em);
+  if (existing) {
+    return res.status(409).json({ error: "An account with this email already exists" });
+  }
+
+  const passwordHash = await bcrypt.hash(pw, 10);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [ins] = await conn.query(
+      `INSERT INTO \`User\` (email, name, passwordHash, userType)
+       VALUES (?, ?, ?, ?)`,
+      [em, nm, passwordHash, rl],
+    );
+    const userId = ins.insertId;
+    if (rl === "student") {
+      await conn.query(
+        "INSERT INTO Student (userId, major) VALUES (?, ?)",
+        [userId, String(major).trim()],
+      );
+    } else {
+      await conn.query(
+        "INSERT INTO Teacher (userId, department) VALUES (?, ?)",
+        [userId, String(department).trim()],
+      );
+    }
+    await conn.commit();
+    return res.status(201).json({ userId, email: em, name: nm, userType: rl });
+  } catch (e) {
+    await conn.rollback();
+    if (e.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+    console.error(e);
+    return res.status(500).json({ error: "Could not create account" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/change-password", async (req, res) => {
+  if (req.session.userId === undefined) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "Database required to change password" });
+  }
+
+  const { currentPassword, newPassword } = req.body || {};
+  const cur = String(currentPassword || "");
+  const neu = String(newPassword || "");
+  if (!cur || !neu) {
+    return res
+      .status(400)
+      .json({ error: "currentPassword and newPassword are required" });
+  }
+  if (neu.length < 8) {
+    return res
+      .status(400)
+      .json({ error: "newPassword must be at least 8 characters" });
+  }
+
+  try {
+    const row = await getPasswordHashRow(pool, req.session.userId);
+    if (!row) return res.status(404).json({ error: "User not found" });
+
+    const stored =
+      row.passwordHash ?? row.passwordhash ?? row.PasswordHash ?? "";
+    const ok = await verifyPassword(stored, cur);
+    if (!ok) return res.status(401).json({ error: "Current password is incorrect" });
+
+    const hash = await bcrypt.hash(neu, 10);
+    const updated = await updatePasswordForUser(pool, req.session.userId, hash);
+    if (!updated) {
+      return res.status(500).json({ error: "Could not update password" });
+    }
+    return res.sendStatus(204);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not update password" });
+  }
 });
 
 router.delete("/delete-account", async (req, res) => {
+  if (req.session.userId === undefined) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
   const { email, password, role } = req.body || {};
   if (!email || !password || !role) {
     return res.status(400).json({ error: "email, password, and role required" });
@@ -294,6 +323,11 @@ router.delete("/delete-account", async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+    if (Number(user.userId) !== Number(req.session.userId)) {
+      return res
+        .status(403)
+        .json({ error: "You can only delete your own account from this session" });
+    }
     const ok = await verifyPassword(user.passwordHash, password);
     if (!ok) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -302,7 +336,6 @@ router.delete("/delete-account", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // Delete the user — cascades to Student/Teacher/SysAdmin due to ON DELETE CASCADE
     for (const table of ["`User`", "`user`"]) {
       try {
         await pool.query(`DELETE FROM ${table} WHERE userId = ?`, [user.userId]);
@@ -313,7 +346,10 @@ router.delete("/delete-account", async (req, res) => {
       }
     }
 
-    return res.sendStatus(200);
+    req.session.destroy(() => {
+      res.clearCookie("cdp.sid");
+      res.sendStatus(200);
+    });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: "Could not delete account" });

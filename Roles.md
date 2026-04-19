@@ -1,11 +1,8 @@
-Quinn:
-Developed the frontend user interface and contributed to backend development.
+# Team roles
 
-Grant:
-Assisted with backend development and authored the project report and documentation.
+Contributions are described per member in the `roles/` directory:
 
-Michael:
-Established the database connection to the frontend and created the sample data for testing.
-
-Rohan:
-Produced the video demonstration and presentation, and contributed to backend development.
+- [Quinn](roles/quinn.md)
+- [Grant](roles/grant.md)
+- [Michael](roles/michael.md)
+- [Rohan](roles/rohan.md)

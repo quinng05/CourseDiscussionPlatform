@@ -1,15 +1,25 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 
 export default function Login() {
   const { user, loading, refresh } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("student");
   const [showErr, setShowErr] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+
+  const signupBanner =
+    location.state?.signedUp === true
+      ? `Account created.${
+          location.state?.email
+            ? ` You can sign in as ${location.state.email}.`
+            : ""
+        }`
+      : "";
 
   if (!loading && user) {
     return <Navigate to="/" replace />;
@@ -55,9 +65,11 @@ export default function Login() {
     });
     if (res.ok) {
       setShowErr(false);
+      await refresh();
       window.alert("Account deleted successfully.");
       setEmail("");
       setPassword("");
+      navigate("/login", { replace: true });
     } else {
       const j = await res.json().catch(() => ({}));
       setErrMsg(j.error || "Could not delete account. Check your credentials.");
@@ -70,6 +82,11 @@ export default function Login() {
       <div className="login-box">
         <h1>Course Discussion Platform</h1>
         <p>Virginia Tech — sign in with your VT credentials</p>
+        {signupBanner ? (
+          <p className="alert alert--success" role="status">
+            {signupBanner}
+          </p>
+        ) : null}
         <form onSubmit={doLogin}>
           <label htmlFor="loginEmail">VT Email</label>
           <input
@@ -107,6 +124,9 @@ export default function Login() {
         <div className={`err${showErr ? " visible" : ""}`} id="loginErr">
           {errMsg || "Incorrect email, password, or role (e.g. pick Student for this account)."}
         </div>
+        <p className="login-hint">
+          New here? <Link to="/signup">Create an account</Link>
+        </p>
       </div>
     </div>
   );

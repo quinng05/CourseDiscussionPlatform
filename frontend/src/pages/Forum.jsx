@@ -209,7 +209,7 @@ export default function Forum() {
   const { courseInstructorId } = useParams();
   const forumId = Number(courseInstructorId);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [forum, setForum] = useState(null);
   const [posts, setPosts] = useState([]);
   const [replyOpenId, setReplyOpenId] = useState(null);
@@ -303,24 +303,15 @@ export default function Forum() {
 
   return (
     <div className="forum-page">
-      <nav>
+      <div className="forum-toolbar">
         <button
           type="button"
           className="back-btn"
           onClick={() => navigate("/")}
         >
-          ← Back to search
+          ← Back to forums
         </button>
-        <span>
-          {user?.name} ({user?.role})
-        </span>
-        <button
-          type="button"
-          onClick={() => signOut().then(() => navigate("/login"))}
-        >
-          Sign out
-        </button>
-      </nav>
+      </div>
 
       <div id="forumHeader">
         <h2>

@@ -134,6 +134,18 @@ Both servers watch for file changes and reload automatically.
 
 ---
 
+## Accounts, sign-up, and passwords
+
+- **Sign in** uses `POST /api/login` with email, password, and the correct role for that account.
+- **Self-service sign-up** (`/signup` in the UI, `POST /api/signup`) is limited to **student** and **teacher** accounts and requires a running MySQL database. Passwords must be at least **8** characters and are stored with **bcrypt**.
+- **Change password** (`/account/password`, `POST /api/change-password`) verifies the current password, then stores the new one with bcrypt (database required).
+- **Sysadmin user creation** (`/admin/users`, `GET`/`POST /api/users`) lists users and creates **student**, **teacher**, or **sysadmin** rows in a single transaction (sysadmin session required).
+- **Reporting** (`/reports`, `GET /api/reports/forum-summary` and `GET /api/reports/ratings-by-semester`) returns SQL aggregates for forums and semesters (authenticated; database required).
+
+See [docs/API.md](docs/API.md) for a concise route list.
+
+---
+
 ## Sample Accounts
 
 These accounts are included in the sample data and can be used to log in:
@@ -152,18 +164,23 @@ These accounts are included in the sample data and can be used to log in:
 
 ```
 CourseDiscussionPlatform/
+├── docs/              # Extra documentation (e.g. API overview)
+├── reports/           # Written report PDFs / deliverables (optional)
+├── roles/             # Per-member contribution notes (see Roles.md)
 ├── frontend/          # React + Vite app (port 5173)
 │   └── src/
-│       ├── pages/     # Home, Login, Forum views
+│       ├── layout/    # Shared shell (nav + outlet)
+│       ├── pages/     # Home, Login, Signup, Forum, Reports, Admin, …
 │       └── auth/      # Auth context and hooks
 ├── backend/           # Express API server (port 3000)
 │   ├── src/
-│   │   ├── routes/    # auth.js, forums.js, posts.js
+│   │   ├── routes/    # auth, forums, posts, users, reports
 │   │   └── db/        # MySQL connection pool
 │   └── db/
 │       ├── schema.sql           # Table definitions
 │       └── sample/
 │           ├── sample_data.sql  # Wipes and re-seeds all data
 │           └── clear_samples.sql  # Wipes all data only
+├── Roles.md           # Index of team role files under roles/
 └── package.json       # Root workspace config (run everything from here)
 ```
