@@ -100,7 +100,7 @@ export default function Login() {
             <option value="sysadmin">System Administrator</option>
           </select>
           <button type="submit">Sign In</button>
-          <button type="button" onClick={doDelete} style={{ marginTop: "8px", background: "#c0392b", color: "white" }}>
+          <button type="button" className="btn btn--danger-outline" onClick={doDelete}>
             Delete Account
           </button>
         </form>

@@ -162,7 +162,9 @@ export default function Home() {
       <div className="home-body">
         <h1>Find a course forum</h1>
         {loadError && (
-          <p style={{ color: "crimson", marginBottom: 8 }}>{loadError}</p>
+          <p className="alert alert--error" role="alert">
+            {loadError}
+          </p>
         )}
 
         <div className="search-row">
@@ -191,7 +193,7 @@ export default function Home() {
         )}
 
         <div id="resultCount">Showing {filtered.length} forum(s)</div>
-        <div id="cardList">
+        <div id="cardList" className="card-list">
           {filtered.map((f) => (
             <div
               key={f.id}
@@ -209,9 +211,10 @@ export default function Home() {
                   with {f.instructor} — {f.ratingCount} ratings
                 </div>
                 {user?.role === "sysadmin" && (
-                  <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+                  <div className="card-actions">
                     <button
                       type="button"
+                      className="btn btn--ghost btn--sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         openEditModal(f);
@@ -221,6 +224,7 @@ export default function Home() {
                     </button>
                     <button
                       type="button"
+                      className="btn btn--danger btn--sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         void deleteForum(f);
