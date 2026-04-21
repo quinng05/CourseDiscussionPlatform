@@ -152,7 +152,7 @@ These accounts are included in the sample data and can be used to log in:
 
 | Email                      | Password        | Role     |
 |----------------------------|-----------------|----------|
-| quinng05@vt.edu            | FireFly!88      | Student  |
+| quinng05@vt.edu            | Hokies2023      | Student  |
 | mmle04@vt.edu              | Sunrise#42      | Student  |
 | professorjohndoe@vt.edu    | OceanWave$31    | Teacher  |
 | professorjanedoe@vt.edu    | ThunderBolt!64  | Teacher  |
