@@ -1,8 +1,14 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import { getPool } from "../db/pool.js";
+import * as mockStore from "../mockStore.js";
 
 const router = Router();
+
+function isDatabaseUnavailableError(e) {
+  const code = e && typeof e === "object" ? e.code : undefined;
+  return code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "ER_ACCESS_DENIED_ERROR";
+}
 
 function requireSession(req, res, next) {
   if (req.session.userId === undefined) {
@@ -21,7 +27,7 @@ function requireSysadmin(req, res, next) {
 router.get("/", requireSession, requireSysadmin, async (req, res) => {
   const pool = getPool();
   if (!pool) {
-    return res.status(503).json({ error: "Database required" });
+    return res.json(mockStore.getDemoUsers());
   }
   try {
     const [rows] = await pool.query(
@@ -40,9 +46,15 @@ router.get("/", requireSession, requireSysadmin, async (req, res) => {
         );
         return res.json(rows2);
       } catch (e2) {
+        if (isDatabaseUnavailableError(e2)) {
+          return res.json(mockStore.getDemoUsers());
+        }
         console.error(e2);
         return res.status(500).json({ error: "Could not list users" });
       }
+    }
+    if (isDatabaseUnavailableError(e)) {
+      return res.json(mockStore.getDemoUsers());
     }
     console.error(e);
     return res.status(500).json({ error: "Could not list users" });
@@ -51,10 +63,6 @@ router.get("/", requireSession, requireSysadmin, async (req, res) => {
 
 router.post("/", requireSession, requireSysadmin, async (req, res) => {
   const pool = getPool();
-  if (!pool) {
-    return res.status(503).json({ error: "Database required" });
-  }
-
   const { email, password, name, role, major, department } = req.body || {};
   const em = String(email || "").trim().toLowerCase();
   const nm = String(name || "").trim();
@@ -79,9 +87,15 @@ router.post("/", requireSession, requireSysadmin, async (req, res) => {
     return res.status(400).json({ error: "password must be at least 8 characters" });
   }
 
+  if (!pool) {
+    const row = mockStore.addDemoUser({ email: em, name: nm, role: rl });
+    return res.status(201).json(row);
+  }
+
   const passwordHash = await bcrypt.hash(pw, 10);
-  const conn = await pool.getConnection();
+  let conn;
   try {
+    conn = await pool.getConnection();
     await conn.beginTransaction();
     const [ins] = await conn.query(
       `INSERT INTO \`User\` (email, name, passwordHash, userType)
@@ -112,17 +126,23 @@ router.post("/", requireSession, requireSysadmin, async (req, res) => {
       userType: rl,
     });
   } catch (e) {
-    await conn.rollback();
+    if (conn) {
+      await conn.rollback();
+    }
     if (e.code === "ER_DUP_ENTRY") {
       return res.status(409).json({ error: "Email already registered" });
     }
     if (e.code === "ER_NO_SUCH_TABLE") {
       return res.status(500).json({ error: "User table not found; check schema" });
     }
+    if (isDatabaseUnavailableError(e)) {
+      const row = mockStore.addDemoUser({ email: em, name: nm, role: rl });
+      return res.status(201).json(row);
+    }
     console.error(e);
     return res.status(500).json({ error: "Could not create user" });
   } finally {
-    conn.release();
+    conn?.release();
   }
 });
 

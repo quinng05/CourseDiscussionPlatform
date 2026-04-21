@@ -131,6 +131,30 @@ const initialForums = [
 let forums = initialForums.map((f) => ({ ...f }));
 let nextForumId = 7;
 const postsByForum = { 1: clonePosts() };
+let demoUsers = [
+  {
+    userId: 1,
+    email: "sysadmin1@vt.edu",
+    name: "System Admin",
+    userType: "sysadmin",
+    createdAt: "2025-01-10T00:00:00.000Z",
+  },
+  {
+    userId: 2,
+    email: "professorjohndoe@vt.edu",
+    name: "Professor John Doe",
+    userType: "teacher",
+    createdAt: "2025-01-12T00:00:00.000Z",
+  },
+  {
+    userId: 3,
+    email: "quinng05@vt.edu",
+    name: "Quinn G.",
+    userType: "student",
+    createdAt: "2025-01-15T00:00:00.000Z",
+  },
+];
+let nextDemoUserId = 4;
 
 function ensurePosts(forumId) {
   const id = Number(forumId);
@@ -242,4 +266,84 @@ export function addTopLevelPost(forumId, payload) {
   };
   posts.unshift(row);
   return row;
+}
+
+export function getDemoUsers() {
+  return demoUsers;
+}
+
+export function addDemoUser({ email, name, role }) {
+  const row = {
+    userId: nextDemoUserId++,
+    email,
+    name,
+    userType: role,
+    createdAt: new Date().toISOString(),
+  };
+  demoUsers = [...demoUsers, row];
+  return row;
+}
+
+export function getForumSummaryReport() {
+  return forums.map((forum) => {
+    const posts = ensurePosts(forum.id);
+    const topLevelRatings = posts.filter((post) =>
+      Number.isFinite(Number(post.score)),
+    );
+    const ratingCount =
+      topLevelRatings.length || Number(forum.ratingCount) || 0;
+    const scoreSum = topLevelRatings.reduce(
+      (sum, post) => sum + Number(post.score || 0),
+      0,
+    );
+    const avgScoreOneToTen =
+      topLevelRatings.length > 0
+        ? Number((scoreSum / topLevelRatings.length).toFixed(2))
+        : Number.isFinite(Number(forum.avgRating))
+          ? Number((Number(forum.avgRating) * 2).toFixed(2))
+          : null;
+
+    return {
+      forumId: forum.id,
+      courseCode: forum.code,
+      courseTitle: forum.title,
+      instructorName: forum.instructor,
+      ratingCount,
+      avgScoreOneToTen,
+      avgOutOfFive:
+        avgScoreOneToTen != null
+          ? Number((avgScoreOneToTen / 2).toFixed(2))
+          : null,
+      postCount: posts.length,
+    };
+  });
+}
+
+export function getRatingsBySemesterReport() {
+  const bucket = new Map();
+
+  Object.values(postsByForum).forEach((posts) => {
+    posts.forEach((post) => {
+      const semesterLabel = post.semester;
+      const score = Number(post.score);
+      if (!semesterLabel || !Number.isFinite(score)) return;
+      const current = bucket.get(semesterLabel) || {
+        semesterLabel,
+        ratingCount: 0,
+        scoreTotal: 0,
+      };
+      current.ratingCount += 1;
+      current.scoreTotal += score;
+      bucket.set(semesterLabel, current);
+    });
+  });
+
+  return Array.from(bucket.values())
+    .map((row) => ({
+      semesterLabel: row.semesterLabel,
+      ratingCount: row.ratingCount,
+      avgScoreOneToTen: Number((row.scoreTotal / row.ratingCount).toFixed(2)),
+      avgOutOfFive: Number((row.scoreTotal / row.ratingCount / 2).toFixed(2)),
+    }))
+    .sort((a, b) => b.semesterLabel.localeCompare(a.semesterLabel));
 }

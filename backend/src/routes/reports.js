@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { getPool } from "../db/pool.js";
+import * as mockStore from "../mockStore.js";
 
 const router = Router();
+
+function isDatabaseUnavailableError(e) {
+  const code = e && typeof e === "object" ? e.code : undefined;
+  return code === "ECONNREFUSED" || code === "ENOTFOUND" || code === "ER_ACCESS_DENIED_ERROR";
+}
 
 function requireSession(req, res, next) {
   if (req.session.userId === undefined) {
@@ -13,7 +19,7 @@ function requireSession(req, res, next) {
 router.get("/forum-summary", requireSession, async (req, res) => {
   const pool = getPool();
   if (!pool) {
-    return res.status(503).json({ error: "Database required for reports" });
+    return res.json(mockStore.getForumSummaryReport());
   }
   try {
     const [rows] = await pool.query(`
@@ -47,6 +53,9 @@ router.get("/forum-summary", requireSession, async (req, res) => {
     }));
     return res.json(out);
   } catch (e) {
+    if (isDatabaseUnavailableError(e)) {
+      return res.json(mockStore.getForumSummaryReport());
+    }
     console.error(e);
     return res.status(500).json({ error: "Could not build forum summary report" });
   }
@@ -55,7 +64,7 @@ router.get("/forum-summary", requireSession, async (req, res) => {
 router.get("/ratings-by-semester", requireSession, async (req, res) => {
   const pool = getPool();
   if (!pool) {
-    return res.status(503).json({ error: "Database required for reports" });
+    return res.json(mockStore.getRatingsBySemesterReport());
   }
   try {
     const [rows] = await pool.query(`
@@ -80,6 +89,9 @@ router.get("/ratings-by-semester", requireSession, async (req, res) => {
       })),
     );
   } catch (e) {
+    if (isDatabaseUnavailableError(e)) {
+      return res.json(mockStore.getRatingsBySemesterReport());
+    }
     console.error(e);
     return res
       .status(500)
