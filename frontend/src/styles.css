@@ -537,6 +537,33 @@ body.login-page,
   display: block;
 }
 
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 36px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #888;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle:hover {
+  color: #333;
+}
+
 .login-hint {
   margin-top: 14px;
   font-size: 0.75rem;
@@ -949,6 +976,29 @@ body.forum-page,
 
 .delete-btn:hover {
   text-decoration: underline;
+}
+
+.my-rating-card {
+  border-left: 3px solid #0057b8;
+  background: #f5f9ff;
+  padding-left: 10px;
+}
+
+.my-rating-badge {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.7rem;
+  background: #0057b8;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+
+.inline-edit-form select {
+  padding: 4px 6px;
+  font-size: 0.82rem;
 }
 
 .post-actions {

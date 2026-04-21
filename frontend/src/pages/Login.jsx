@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
+import { EyeIcon, EyeOffIcon } from "../icons/EyeIcon.jsx";
 
 export default function Login() {
   const { user, loading, refresh } = useAuth();
@@ -11,6 +12,7 @@ export default function Login() {
   const [role, setRole] = useState("student");
   const [showErr, setShowErr] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const signupBanner =
     location.state?.signedUp === true
@@ -98,14 +100,24 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
           />
           <label htmlFor="loginPass">Password</label>
-          <input
-            id="loginPass"
-            type="password"
-            autoComplete="current-password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="password-wrapper">
+            <input
+              id="loginPass"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              onClick={() => setShowPassword((v) => !v)}
+            >
+              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+            </button>
+          </div>
           <label htmlFor="loginRole">I am a...</label>
           <select
             id="loginRole"

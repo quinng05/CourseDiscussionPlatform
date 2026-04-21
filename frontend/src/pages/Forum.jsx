@@ -44,14 +44,107 @@ function scoreLabel(score) {
   return `${"★".repeat(full)}${hasH ? "½" : ""} (${score}/10)`;
 }
 
+function MyRatingCard({ rating, onChanged }) {
+  const [editing, setEditing] = useState(false);
+  const [editScore, setEditScore] = useState(String(rating.score));
+  const [editText, setEditText] = useState("");
+  const semesterLabel = rating.term && rating.year ? `${rating.term} ${rating.year}` : "";
+
+  async function saveEdit() {
+    const score = Number(editScore);
+    if (!score) return;
+    const text = editText.trim();
+
+    const scoreRes = await fetch(`/api/ratings/${rating.ratingId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ score }),
+    });
+    if (!scoreRes.ok) {
+      window.alert("Could not update rating.");
+      return;
+    }
+
+    if (text) {
+      const postRes = await fetch(`/api/ratings/${rating.ratingId}/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ postText: text }),
+      });
+      if (!postRes.ok) {
+        window.alert("Score saved, but could not attach review text.");
+      }
+    }
+
+    setEditing(false);
+    onChanged();
+  }
+
+  async function deleteRating() {
+    if (!window.confirm("Delete your rating? This cannot be undone.")) return;
+    const r = await fetch(`/api/ratings/${rating.ratingId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (!r.ok) {
+      window.alert("Could not delete rating.");
+      return;
+    }
+    onChanged();
+  }
+
+  return (
+    <div className="post my-rating-card">
+      <div className="post-meta">
+        <strong>You</strong>
+        {semesterLabel ? ` • ${semesterLabel}` : ""}
+        <span className="my-rating-badge">your rating</span>
+      </div>
+      {editing ? (
+        <div className="inline-edit-form">
+          <select
+            value={editScore}
+            onChange={(e) => setEditScore(e.target.value)}
+          >
+            {SCORE_OPTIONS.filter((o) => o.value !== "").map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <textarea
+            placeholder="Add a review (optional)"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
+          <div className="form-btns">
+            <button type="button" onClick={saveEdit}>Save</button>
+            <button type="button" onClick={() => { setEditing(false); setEditScore(String(rating.score)); setEditText(""); }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="post-score">{scoreLabel(rating.score)}</div>
+      )}
+      <div className="post-actions">
+        {!editing && (
+          <button type="button" className="edit-btn" onClick={() => setEditing(true)}>Edit</button>
+        )}
+        <button type="button" className="delete-btn" onClick={deleteRating}>Delete</button>
+      </div>
+    </div>
+  );
+}
+
 function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId }) {
   const [repliesOpen, setRepliesOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState("");
+  const [editScore, setEditScore] = useState("");
   const nReplies = post.replies?.length || 0;
   const formVisible = replyOpenId === post.postId;
   const isOwner = post.authorId === userId;
+  const hasRating = post.ratingId != null;
 
   async function submitReply() {
     const text = replyText.trim();
@@ -80,20 +173,34 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
 
   async function saveEdit() {
     const text = editText.trim();
-    if (!text) {
+    if (!hasRating && !text) {
       window.alert("Post text cannot be empty.");
       return;
     }
-    const r = await fetch(`/api/posts/${post.postId}`, {
+
+    const postRes = await fetch(`/api/posts/${post.postId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ postText: text }),
+      body: JSON.stringify({ postText: text || post.text || "" }),
     });
-    if (!r.ok) {
+    if (!postRes.ok) {
       window.alert("Could not save edit.");
       return;
     }
+
+    if (hasRating && editScore) {
+      const ratingRes = await fetch(`/api/ratings/${post.ratingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ score: Number(editScore) }),
+      });
+      if (!ratingRes.ok) {
+        window.alert("Text saved, but could not update score.");
+      }
+    }
+
     setEditing(false);
     onPosted();
   }
@@ -122,7 +229,18 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
       )}
       {editing ? (
         <div className="inline-edit-form">
+          {hasRating && (
+            <select
+              value={editScore}
+              onChange={(e) => setEditScore(e.target.value)}
+            >
+              {SCORE_OPTIONS.filter((o) => o.value !== "").map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          )}
           <textarea
+            placeholder={hasRating ? "Review text (optional)" : ""}
             value={editText}
             onChange={(e) => setEditText(e.target.value)}
           />
@@ -147,7 +265,7 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
             <button
               type="button"
               className="edit-btn"
-              onClick={() => { setEditing(true); setEditText(post.text || ""); }}
+              onClick={() => { setEditing(true); setEditText(post.text || ""); setEditScore(post.score != null ? String(post.score) : ""); }}
             >
               Edit
             </button>
@@ -217,26 +335,26 @@ export default function Forum() {
   const [reviewText, setReviewText] = useState("");
   const [semester, setSemester] = useState("1");
   const [anon, setAnon] = useState(false);
+  const [myRating, setMyRating] = useState(null);
 
   const loadAll = useCallback(async () => {
     if (!Number.isFinite(forumId)) {
       navigate("/", { replace: true });
       return;
     }
-    const [fr, pr] = await Promise.all([
+    const requests = [
       fetch(`/api/forums/${forumId}`, { credentials: "include" }),
       fetch(`/api/forums/${forumId}/posts`, { credentials: "include" }),
-    ]);
+      fetch(`/api/forums/${forumId}/my-rating`, { credentials: "include" }),
+    ];
+    const [fr, pr, mr] = await Promise.all(requests);
     if (!fr.ok) {
       navigate("/", { replace: true });
       return;
     }
     setForum(await fr.json());
-    if (pr.ok) {
-      setPosts(await pr.json());
-    } else {
-      setPosts([]);
-    }
+    setPosts(pr.ok ? await pr.json() : []);
+    setMyRating(mr.ok ? await mr.json() : null);
   }, [forumId, navigate]);
 
   useEffect(() => {
@@ -246,9 +364,10 @@ export default function Forum() {
     }
     let cancelled = false;
     (async () => {
-      const [fr, pr] = await Promise.all([
+      const [fr, pr, mr] = await Promise.all([
         fetch(`/api/forums/${forumId}`, { credentials: "include" }),
         fetch(`/api/forums/${forumId}/posts`, { credentials: "include" }),
+        fetch(`/api/forums/${forumId}/my-rating`, { credentials: "include" }),
       ]);
       if (cancelled) return;
       if (!fr.ok) {
@@ -256,11 +375,8 @@ export default function Forum() {
         return;
       }
       setForum(await fr.json());
-      if (pr.ok) {
-        setPosts(await pr.json());
-      } else {
-        setPosts([]);
-      }
+      setPosts(pr.ok ? await pr.json() : []);
+      setMyRating(mr.ok ? await mr.json() : null);
     })();
     return () => {
       cancelled = true;
@@ -327,6 +443,14 @@ export default function Forum() {
 
       <div id="postsArea">
         <div id="postList">
+          {myRating && (
+            <MyRatingCard
+              key={myRating.ratingId}
+              rating={myRating}
+              forumId={forumId}
+              onChanged={loadAll}
+            />
+          )}
           {posts.map((p) => (
             <PostItem
               key={p.postId}

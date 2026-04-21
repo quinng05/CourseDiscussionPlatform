@@ -45,6 +45,110 @@ router.post("/posts", requireSession, async (req, res) => {
   }
 });
 
+// Get the current user's orphaned rating (no linked DiscussionPost) for a forum
+router.get("/forums/:courseInstructorId/my-rating", requireSession, async (req, res) => {
+  const forumId = Number(req.params.courseInstructorId);
+  if (!Number.isFinite(forumId)) return res.status(400).json({ error: "Invalid forum id" });
+
+  const pool = getPool();
+  if (!pool) return res.json(null);
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT r.ratingId, r.score, r.semesterId, s.term, s.year
+       FROM Rating r
+       LEFT JOIN DiscussionPost dp ON r.ratingId = dp.ratingId
+       LEFT JOIN Semester s ON r.semesterId = s.semesterId
+       WHERE r.courseInstructorId = ? AND r.studentId = ? AND dp.postId IS NULL
+       LIMIT 1`,
+      [forumId, req.session.userId]
+    );
+    return res.json(rows[0] || null);
+  } catch (e) {
+    console.error(e);
+    return res.json(null);
+  }
+});
+
+// Add review text to an orphaned rating, converting it to a full DiscussionPost
+router.post("/ratings/:ratingId/post", requireSession, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+  const text = String(req.body?.postText || "").trim();
+  if (!Number.isFinite(ratingId) || !text) {
+    return res.status(400).json({ error: "postText required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "No database connection" });
+
+  try {
+    const [[rating]] = await pool.query(
+      `SELECT r.ratingId, r.courseInstructorId, r.semesterId
+       FROM Rating r
+       LEFT JOIN DiscussionPost dp ON r.ratingId = dp.ratingId
+       WHERE r.ratingId = ? AND r.studentId = ? AND dp.postId IS NULL`,
+      [ratingId, req.session.userId]
+    );
+    if (!rating) {
+      return res.status(404).json({ error: "Rating not found or already has a post" });
+    }
+    const [result] = await pool.query(
+      `INSERT INTO DiscussionPost (postText, courseInstructorId, authorId, ratingId, semesterId)
+       VALUES (?, ?, ?, ?, ?)`,
+      [text, rating.courseInstructorId, req.session.userId, ratingId, rating.semesterId]
+    );
+    return res.status(201).json({ postId: result.insertId });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not create post" });
+  }
+});
+
+// Update an orphaned rating's score (author only)
+router.put("/ratings/:ratingId", requireSession, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+  const score = Number(req.body?.score);
+  if (!Number.isFinite(ratingId) || !Number.isFinite(score) || score < 1 || score > 10) {
+    return res.status(400).json({ error: "score 1–10 required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "No database connection" });
+
+  try {
+    const [result] = await pool.query(
+      `UPDATE Rating SET score = ? WHERE ratingId = ? AND studentId = ?`,
+      [score, ratingId, req.session.userId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Rating not found or not yours" });
+    return res.json({ ratingId, score });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not update rating" });
+  }
+});
+
+// Delete an orphaned rating (author only)
+router.delete("/ratings/:ratingId", requireSession, async (req, res) => {
+  const ratingId = Number(req.params.ratingId);
+  if (!Number.isFinite(ratingId)) return res.status(400).json({ error: "Invalid rating id" });
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "No database connection" });
+
+  try {
+    const [result] = await pool.query(
+      `DELETE FROM Rating WHERE ratingId = ? AND studentId = ?`,
+      [ratingId, req.session.userId]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Rating not found or not yours" });
+    return res.sendStatus(204);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: "Could not delete rating" });
+  }
+});
+
 // Create a new rating + top level post
 router.post("/ratings", requireSession, async (req, res) => {
   if (req.session.role !== "student") {
@@ -141,6 +245,8 @@ router.put("/posts/:postId", requireSession, async (req, res) => {
 });
 
 // Delete a post (author only)
+// DiscussionPost.ratingId → Rating has no cascade from post deletion, so we
+// must look up and delete the linked rating ourselves after removing the post.
 router.delete("/posts/:postId", requireSession, async (req, res) => {
   const postId = Number(req.params.postId);
   if (!Number.isFinite(postId)) {
@@ -151,13 +257,25 @@ router.delete("/posts/:postId", requireSession, async (req, res) => {
   if (!pool) return res.status(503).json({ error: "No database connection" });
 
   try {
-    const [result] = await pool.query(
-      `DELETE FROM DiscussionPost WHERE postId = ? AND authorId = ?`,
+    // Fetch the linked ratingId before deletion
+    const [[post]] = await pool.query(
+      `SELECT ratingId FROM DiscussionPost WHERE postId = ? AND authorId = ?`,
       [postId, req.session.userId]
     );
-    if (result.affectedRows === 0) {
+    if (!post) {
       return res.status(404).json({ error: "Post not found or not yours" });
     }
+
+    await pool.query(
+      `DELETE FROM DiscussionPost WHERE postId = ?`,
+      [postId]
+    );
+
+    // Clean up the orphaned rating if one was attached
+    if (post.ratingId != null) {
+      await pool.query(`DELETE FROM Rating WHERE ratingId = ?`, [post.ratingId]);
+    }
+
     return res.sendStatus(204);
   } catch (e) {
     console.error(e);
