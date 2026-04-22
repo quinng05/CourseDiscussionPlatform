@@ -70,7 +70,7 @@ mysql -u root -p < backend/db/sample/sample_data.sql
 This populates the database with:
 - 20 courses (CS, MATH, CHEM, PHYS, ENGL, ENGE)
 - 20 users (students, teachers, and sysadmins)
-- 5 semesters (Fall 2025 through Fall 2026)
+- 5 semesters (Spring 2025, Fall 2025, Spring 2026, Summer 2026, Fall 2026)
 - 5 course forums (CS4604, CS3214, MATH1226, ENGL1105, CHEM1035)
 - 8 ratings and 5 discussion posts
 
@@ -110,6 +110,8 @@ DB_NAME=coursediscussionplatform
 - **`DB_USER`** — your MySQL username (commonly `root` for local dev)
 - **`DB_PASSWORD`** — your MySQL password (leave blank if you have none set)
 - **`SESSION_SECRET`** — can be any string for local development
+
+> **No database?** You can omit (or comment out) all four `DB_*` variables to run in demo mode. The app will serve mock forum and post data from memory. Login accepts any credentials and signup/change-password are disabled. The sample accounts in the table below still work in demo mode.
 
 ---
 
@@ -152,7 +154,7 @@ These accounts are included in the sample data and can be used to log in:
 
 | Email                      | Password        | Role     |
 |----------------------------|-----------------|----------|
-| quinng05@vt.edu            | Hokies2023      | Student  |
+| quinng05@vt.edu            | FireFly!88      | Student  |
 | mmle04@vt.edu              | Sunrise#42      | Student  |
 | professorjohndoe@vt.edu    | OceanWave$31    | Teacher  |
 | professorjanedoe@vt.edu    | ThunderBolt!64  | Teacher  |
@@ -175,12 +177,14 @@ CourseDiscussionPlatform/
 ├── backend/           # Express API server (port 3000)
 │   ├── src/
 │   │   ├── routes/    # auth, forums, posts, users, reports
-│   │   └── db/        # MySQL connection pool
+│   │   ├── db/        # MySQL connection pool (pool.js)
+│   │   └── mockStore.js  # In-memory mock data for demo mode
 │   └── db/
 │       ├── schema.sql           # Table definitions
 │       └── sample/
 │           ├── sample_data.sql  # Wipes and re-seeds all data
 │           └── clear_samples.sql  # Wipes all data only
+├── server/            # Legacy directory (unused — superseded by backend/)
 ├── Roles.md           # Index of team role files under roles/
 └── package.json       # Root workspace config (run everything from here)
 ```
