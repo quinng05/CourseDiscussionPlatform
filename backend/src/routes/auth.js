@@ -318,26 +318,43 @@ router.delete("/delete-account", async (req, res) => {
     return res.status(401).json({ error: "Not authenticated" });
   }
 
-  const { email, password, role } = req.body || {};
-  if (!email || !password || !role) {
-    return res.status(400).json({ error: "email, password, and role required" });
-  }
-
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "No database connection" });
+  }
+
+  const { email, password, role } = req.body || {};
+  if (!email) {
+    return res.status(400).json({ error: "email is required" });
   }
 
   try {
     const raw = await findUserByEmail(pool, email);
     const user = mapUserRow(raw);
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(404).json({ error: "User not found" });
     }
+
+    // Sysadmin can delete any account by email only
+    if (req.session.role === "sysadmin") {
+      for (const table of ["`User`", "`user`"]) {
+        try {
+          await pool.query(`DELETE FROM ${table} WHERE userId = ?`, [user.userId]);
+          break;
+        } catch (e) {
+          if (e.code === "ER_NO_SUCH_TABLE") continue;
+          throw e;
+        }
+      }
+      return res.sendStatus(200);
+    }
+
+    // Regular users must verify password and role to delete their own account
     if (Number(user.userId) !== Number(req.session.userId)) {
-      return res
-        .status(403)
-        .json({ error: "You can only delete your own account from this session" });
+      return res.status(403).json({ error: "You can only delete your own account" });
+    }
+    if (!password || !role) {
+      return res.status(400).json({ error: "password and role required" });
     }
     const ok = await verifyPassword(user.passwordHash, password);
     if (!ok) {

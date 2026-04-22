@@ -14,6 +14,11 @@ export default function AdminUsers() {
   const [major, setMajor] = useState("");
   const [department, setDepartment] = useState("");
 
+  // Delete form state
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteErr, setDeleteErr] = useState("");
+  const [deleteOkMsg, setDeleteOkMsg] = useState("");
+
   const load = useCallback(async () => {
     setLoadErr("");
     const r = await fetch("/api/users", { credentials: "include" });
@@ -63,6 +68,32 @@ export default function AdminUsers() {
     setName("");
     setMajor("");
     setDepartment("");
+    await load();
+  }
+
+  async function onDelete(e) {
+    e.preventDefault();
+    setDeleteErr("");
+    setDeleteOkMsg("");
+    if (!deleteEmail.trim()) {
+      setDeleteErr("Please enter an email to delete.");
+      return;
+    }
+    const confirmed = window.confirm(`Are you sure you want to delete the account for ${deleteEmail}? This cannot be undone.`);
+    if (!confirmed) return;
+    const r = await fetch("/api/delete-account", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ email: deleteEmail.trim() }),
+    });
+    if (!r.ok) {
+      const j = await r.json().catch(() => ({}));
+      setDeleteErr(j.error ? String(j.error) : "Could not delete user.");
+      return;
+    }
+    setDeleteOkMsg(`Account for ${deleteEmail} deleted successfully.`);
+    setDeleteEmail("");
     await load();
   }
 
@@ -195,6 +226,34 @@ export default function AdminUsers() {
         {okMsg ? (
           <p className="alert alert--success" role="status">
             {okMsg}
+          </p>
+        ) : null}
+      </section>
+
+      <section className="report-section">
+        <h2>Delete user</h2>
+        <p className="muted">Enter the email of the account you want to permanently delete.</p>
+        <form className="stack-form admin-user-form" onSubmit={onDelete}>
+          <label htmlFor="delEmail">Email</label>
+          <input
+            id="delEmail"
+            type="email"
+            value={deleteEmail}
+            onChange={(e) => setDeleteEmail(e.target.value)}
+            required
+          />
+          <button type="submit" className="btn btn--danger">
+            Delete user
+          </button>
+        </form>
+        {deleteErr ? (
+          <p className="alert alert--error" role="alert">
+            {deleteErr}
+          </p>
+        ) : null}
+        {deleteOkMsg ? (
+          <p className="alert alert--success" role="status">
+            {deleteOkMsg}
           </p>
         ) : null}
       </section>

@@ -50,35 +50,6 @@ export default function Login() {
     }
   }
 
-  async function doDelete(e) {
-    e.preventDefault();
-    if (!email || !password || !role) {
-      setErrMsg("Please fill in email, password, and role to delete your account.");
-      setShowErr(true);
-      return;
-    }
-    const confirmed = window.confirm(`Are you sure you want to delete the account for ${email}? This cannot be undone.`);
-    if (!confirmed) return;
-    const res = await fetch("/api/delete-account", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email: email.trim(), password, role }),
-    });
-    if (res.ok) {
-      setShowErr(false);
-      await refresh();
-      window.alert("Account deleted successfully.");
-      setEmail("");
-      setPassword("");
-      navigate("/login", { replace: true });
-    } else {
-      const j = await res.json().catch(() => ({}));
-      setErrMsg(j.error || "Could not delete account. Check your credentials.");
-      setShowErr(true);
-    }
-  }
-
   return (
     <div className="login-page">
       <div className="login-box">
@@ -129,9 +100,6 @@ export default function Login() {
             <option value="sysadmin">System Administrator</option>
           </select>
           <button type="submit">Sign In</button>
-          <button type="button" className="btn btn--danger-outline" onClick={doDelete}>
-            Delete Account
-          </button>
         </form>
         <div className={`err${showErr ? " visible" : ""}`} id="loginErr">
           {errMsg || "Incorrect email, password, or role (e.g. pick Student for this account)."}
