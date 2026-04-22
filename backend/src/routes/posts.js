@@ -45,6 +45,32 @@ router.post("/posts", requireSession, async (req, res) => {
   }
 });
 
+// Get all orphaned ratings for a forum (no linked DiscussionPost), excluding the current user's own
+router.get("/forums/:courseInstructorId/ratings", requireSession, async (req, res) => {
+  const forumId = Number(req.params.courseInstructorId);
+  if (!Number.isFinite(forumId)) return res.status(400).json({ error: "Invalid forum id" });
+
+  const pool = getPool();
+  if (!pool) return res.json([]);
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT r.ratingId, r.score, r.createdAt, r.semesterId, s.term, s.year, u.name AS authorName
+       FROM Rating r
+       LEFT JOIN DiscussionPost dp ON r.ratingId = dp.ratingId
+       LEFT JOIN Semester s ON r.semesterId = s.semesterId
+       JOIN User u ON r.studentId = u.userId
+       WHERE r.courseInstructorId = ? AND r.studentId != ? AND dp.postId IS NULL
+       ORDER BY r.createdAt ASC`,
+      [forumId, req.session.userId]
+    );
+    return res.json(rows);
+  } catch (e) {
+    console.error(e);
+    return res.json([]);
+  }
+});
+
 // Get the current user's orphaned rating (no linked DiscussionPost) for a forum
 router.get("/forums/:courseInstructorId/my-rating", requireSession, async (req, res) => {
   const forumId = Number(req.params.courseInstructorId);
@@ -55,7 +81,7 @@ router.get("/forums/:courseInstructorId/my-rating", requireSession, async (req, 
 
   try {
     const [rows] = await pool.query(
-      `SELECT r.ratingId, r.score, r.semesterId, s.term, s.year
+      `SELECT r.ratingId, r.score, r.createdAt, r.semesterId, s.term, s.year
        FROM Rating r
        LEFT JOIN DiscussionPost dp ON r.ratingId = dp.ratingId
        LEFT JOIN Semester s ON r.semesterId = s.semesterId

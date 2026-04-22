@@ -66,7 +66,7 @@ export default function Signup() {
           <input
             id="suEmail"
             type="email"
-            autoComplete="email"
+            autoComplete="username"
             placeholder="pid@vt.edu"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

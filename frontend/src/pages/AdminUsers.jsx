@@ -129,6 +129,7 @@ export default function AdminUsers() {
           <input
             id="auEmail"
             type="email"
+            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -144,6 +145,7 @@ export default function AdminUsers() {
           <input
             id="auPass"
             type="password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

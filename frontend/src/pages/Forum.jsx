@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/useAuth.js";
 
@@ -25,14 +25,11 @@ const SCORE_OPTIONS = [
 
 function formatDate(ts) {
   if (!ts) return "";
-  return new Date(ts).toLocaleString("en-US", {
+  return new Date(ts).toLocaleDateString("en-US", {
     timeZone: "America/New_York",
     month: "long",
     day: "numeric",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
   });
 }
 
@@ -42,6 +39,20 @@ function scoreLabel(score) {
   const full = Math.floor(half);
   const hasH = half % 1 >= 0.5;
   return `${"★".repeat(full)}${hasH ? "½" : ""} (${score}/10)`;
+}
+
+function OtherRatingCard({ rating }) {
+  const semesterLabel = rating.term && rating.year ? `${rating.term} ${rating.year}` : "";
+  return (
+    <div className="post other-rating-card">
+      <div className="post-meta">
+        <strong>{rating.authorName}</strong>
+        {semesterLabel ? ` • ${semesterLabel}` : ""}
+        {rating.createdAt ? ` • ${formatDate(rating.createdAt)}` : ""}
+      </div>
+      <div className="post-score">{scoreLabel(rating.score)}</div>
+    </div>
+  );
 }
 
 function MyRatingCard({ rating, onChanged }) {
@@ -100,6 +111,7 @@ function MyRatingCard({ rating, onChanged }) {
       <div className="post-meta">
         <strong>You</strong>
         {semesterLabel ? ` • ${semesterLabel}` : ""}
+        {rating.createdAt ? ` • ${formatDate(rating.createdAt)}` : ""}
         <span className="my-rating-badge">your rating</span>
       </div>
       {editing ? (
@@ -178,18 +190,22 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
       return;
     }
 
-    const postRes = await fetch(`/api/posts/${post.postId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ postText: text || post.text || "" }),
-    });
-    if (!postRes.ok) {
-      window.alert("Could not save edit.");
-      return;
+    // Only send text update if there is text to save
+    if (text) {
+      const postRes = await fetch(`/api/posts/${post.postId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ postText: text }),
+      });
+      if (!postRes.ok) {
+        window.alert("Could not save edit.");
+        return;
+      }
     }
 
-    if (hasRating && editScore) {
+    // Update score if this post has a linked rating and score changed
+    if (hasRating && editScore && Number(editScore) !== post.score) {
       const ratingRes = await fetch(`/api/ratings/${post.ratingId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -197,7 +213,8 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
         body: JSON.stringify({ score: Number(editScore) }),
       });
       if (!ratingRes.ok) {
-        window.alert("Text saved, but could not update score.");
+        window.alert("Could not update score.");
+        return;
       }
     }
 
@@ -253,13 +270,15 @@ function PostItem({ post, forumId, userId, onPosted, replyOpenId, setReplyOpenId
         post.text ? <div className="post-text">{post.text}</div> : null
       )}
       <div className="post-actions">
-        <button
-          type="button"
-          className="reply-btn"
-          onClick={() => setReplyOpenId(post.postId)}
-        >
-          Reply
-        </button>
+        {post.text && (
+          <button
+            type="button"
+            className="reply-btn"
+            onClick={() => setReplyOpenId(post.postId)}
+          >
+            Reply
+          </button>
+        )}
         {isOwner && !editing && (
           <>
             <button
@@ -336,18 +355,63 @@ export default function Forum() {
   const [semester, setSemester] = useState("1");
   const [anon, setAnon] = useState(false);
   const [myRating, setMyRating] = useState(null);
+  const [otherRatings, setOtherRatings] = useState([]);
+  const [sortBy, setSortBy] = useState("date");
+  const [sortDir, setSortDir] = useState("desc");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [semesterFilter, setSemesterFilter] = useState("all");
+
+  const allItems = useMemo(() => [
+    ...(myRating ? [{
+      type: "myRating", data: myRating,
+      createdAt: myRating.createdAt, score: myRating.score,
+      semester: myRating.term && myRating.year ? `${myRating.term} ${myRating.year}` : null,
+    }] : []),
+    ...otherRatings.map((r) => ({
+      type: "otherRating", data: r,
+      createdAt: r.createdAt, score: r.score,
+      semester: r.term && r.year ? `${r.term} ${r.year}` : null,
+    })),
+    ...posts.filter((p) => p.parentPostId == null).map((p) => ({
+      type: "post", data: p,
+      createdAt: p.createdAt, score: p.score ?? null,
+      semester: p.semester ?? null,
+    })),
+  ], [myRating, otherRatings, posts]);
+
+  const semesters = useMemo(() => {
+    const seen = new Set();
+    return allItems.map((i) => i.semester).filter((s) => s && !seen.has(s) && seen.add(s));
+  }, [allItems]);
+
+  const visibleItems = useMemo(() => {
+    let items = allItems;
+    if (typeFilter === "ratings") {
+      items = items.filter((i) => i.type === "myRating" || i.type === "otherRating");
+    } else if (typeFilter === "posts") {
+      items = items.filter((i) => i.type === "post");
+    }
+    if (semesterFilter !== "all") {
+      items = items.filter((i) => i.semester === semesterFilter);
+    }
+    return [...items].sort((a, b) => {
+      const aVal = sortBy === "score" ? (a.score ?? -1) : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const bVal = sortBy === "score" ? (b.score ?? -1) : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return sortDir === "asc" ? aVal - bVal : bVal - aVal;
+    });
+  }, [allItems, typeFilter, semesterFilter, sortBy, sortDir]);
 
   const loadAll = useCallback(async () => {
     if (!Number.isFinite(forumId)) {
       navigate("/", { replace: true });
       return;
     }
-    const requests = [
+    const [fr, pr, mr, or_] = await Promise.all([
       fetch(`/api/forums/${forumId}`, { credentials: "include" }),
       fetch(`/api/forums/${forumId}/posts`, { credentials: "include" }),
       fetch(`/api/forums/${forumId}/my-rating`, { credentials: "include" }),
-    ];
-    const [fr, pr, mr] = await Promise.all(requests);
+      fetch(`/api/forums/${forumId}/ratings`, { credentials: "include" }),
+    ]);
     if (!fr.ok) {
       navigate("/", { replace: true });
       return;
@@ -355,6 +419,7 @@ export default function Forum() {
     setForum(await fr.json());
     setPosts(pr.ok ? await pr.json() : []);
     setMyRating(mr.ok ? await mr.json() : null);
+    setOtherRatings(or_.ok ? await or_.json() : []);
   }, [forumId, navigate]);
 
   useEffect(() => {
@@ -364,10 +429,11 @@ export default function Forum() {
     }
     let cancelled = false;
     (async () => {
-      const [fr, pr, mr] = await Promise.all([
+      const [fr, pr, mr, or_] = await Promise.all([
         fetch(`/api/forums/${forumId}`, { credentials: "include" }),
         fetch(`/api/forums/${forumId}/posts`, { credentials: "include" }),
         fetch(`/api/forums/${forumId}/my-rating`, { credentials: "include" }),
+        fetch(`/api/forums/${forumId}/ratings`, { credentials: "include" }),
       ]);
       if (cancelled) return;
       if (!fr.ok) {
@@ -377,6 +443,7 @@ export default function Forum() {
       setForum(await fr.json());
       setPosts(pr.ok ? await pr.json() : []);
       setMyRating(mr.ok ? await mr.json() : null);
+      setOtherRatings(or_.ok ? await or_.json() : []);
     })();
     return () => {
       cancelled = true;
@@ -442,26 +509,66 @@ export default function Forum() {
       </div>
 
       <div id="postsArea">
-        <div id="postList">
-          {myRating && (
-            <MyRatingCard
-              key={myRating.ratingId}
-              rating={myRating}
-              forumId={forumId}
-              onChanged={loadAll}
-            />
+        <div className="filter-bar">
+          <button
+            className={`filter-btn${sortBy === "date" ? " active" : ""}`}
+            onClick={() => sortBy === "date" ? setSortDir((d) => d === "asc" ? "desc" : "asc") : setSortBy("date")}
+          >
+            Date {sortBy === "date" ? (sortDir === "asc" ? "↑" : "↓") : ""}
+          </button>
+          <button
+            className={`filter-btn${sortBy === "score" ? " active" : ""}`}
+            onClick={() => sortBy === "score" ? setSortDir((d) => d === "asc" ? "desc" : "asc") : setSortBy("score")}
+          >
+            Score {sortBy === "score" ? (sortDir === "asc" ? "↑" : "↓") : ""}
+          </button>
+
+          <div className="filter-sep" />
+
+          <button className={`filter-btn${typeFilter === "all" ? " active" : ""}`} onClick={() => setTypeFilter("all")}>All</button>
+          <button className={`filter-btn${typeFilter === "ratings" ? " active" : ""}`} onClick={() => setTypeFilter("ratings")}>Ratings</button>
+          <button className={`filter-btn${typeFilter === "posts" ? " active" : ""}`} onClick={() => setTypeFilter("posts")}>Posts</button>
+
+          {semesters.length > 0 && (
+            <>
+              <div className="filter-sep" />
+              <button className={`filter-btn${semesterFilter === "all" ? " active" : ""}`} onClick={() => setSemesterFilter("all")}>All</button>
+              {semesters.map((s) => (
+                <button
+                  key={s}
+                  className={`filter-btn${semesterFilter === s ? " active" : ""}`}
+                  onClick={() => setSemesterFilter(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </>
           )}
-          {posts.map((p) => (
-            <PostItem
-              key={p.postId}
-              post={p}
-              forumId={forumId}
-              userId={user?.userId}
-              onPosted={loadAll}
-              replyOpenId={replyOpenId}
-              setReplyOpenId={setReplyOpenId}
-            />
-          ))}
+        </div>
+
+        <div id="postList">
+          {visibleItems.map((item) => {
+            if (item.type === "myRating") {
+              return <MyRatingCard key="my-rating" rating={item.data} onChanged={loadAll} />;
+            }
+            if (item.type === "otherRating") {
+              return <OtherRatingCard key={item.data.ratingId} rating={item.data} />;
+            }
+            return (
+              <PostItem
+                key={item.data.postId}
+                post={item.data}
+                forumId={forumId}
+                userId={user?.userId}
+                onPosted={loadAll}
+                replyOpenId={replyOpenId}
+                setReplyOpenId={setReplyOpenId}
+              />
+            );
+          })}
+          {visibleItems.length === 0 && (
+            <p className="filter-empty">No items match the current filters.</p>
+          )}
         </div>
       </div>
 

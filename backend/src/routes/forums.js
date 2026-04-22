@@ -62,7 +62,7 @@ router.get("/:courseInstructorId/posts", requireSession, async (req, res) => {
 
   try {
     const [rows] = await pool.query(
-      `SELECT 
+      `SELECT
         dp.postId,
         dp.postText AS text,
         dp.createdAt,
@@ -71,10 +71,12 @@ router.get("/:courseInstructorId/posts", requireSession, async (req, res) => {
         dp.authorId,
         dp.semesterId,
         COALESCE(u.name, 'Unknown') AS authorName,
-        r.score
+        r.score,
+        CASE WHEN s.term IS NOT NULL THEN CONCAT(s.term, ' ', s.year) ELSE NULL END AS semester
        FROM DiscussionPost dp
        LEFT JOIN User u ON dp.authorId = u.userId
        LEFT JOIN Rating r ON dp.ratingId = r.ratingId
+       LEFT JOIN Semester s ON dp.semesterId = s.semesterId
        WHERE dp.courseInstructorId = ?
        ORDER BY dp.createdAt ASC`,
       [id]

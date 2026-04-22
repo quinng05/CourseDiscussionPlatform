@@ -912,6 +912,54 @@ body.forum-page,
   width: 100%;
 }
 
+/* ── Filter bar ──────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+
+.filter-btn {
+  font-size: 0.82rem;
+  padding: 5px 14px;
+  border: 1px solid #d5d5e0;
+  background: #fff;
+  cursor: pointer;
+  border-radius: 20px;
+  color: #555;
+  line-height: 1.5;
+  transition: border-color 0.1s, color 0.1s;
+}
+
+.filter-btn:hover {
+  border-color: #aaa;
+  color: #222;
+}
+
+.filter-btn.active {
+  background: #4f7cc4;
+  border-color: #4f7cc4;
+  color: #fff;
+}
+
+.filter-sep {
+  width: 1px;
+  height: 20px;
+  background: #dde;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.filter-empty {
+  font-size: 0.82rem;
+  color: #999;
+  padding: 16px 0;
+  text-align: center;
+}
+
 /* ── Posts ───────────────────────────────────────────── */
 .post {
   border: 1px solid var(--color-border);
@@ -976,6 +1024,12 @@ body.forum-page,
 
 .delete-btn:hover {
   text-decoration: underline;
+}
+
+.other-rating-card {
+  border-left: 3px solid #ddd;
+  padding-left: 10px;
+  opacity: 0.85;
 }
 
 .my-rating-card {
